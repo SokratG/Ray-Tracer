@@ -18,9 +18,11 @@ public:
 	void set_material(const shared_ptr<Material> m) { material = m; }
 public:
 	vec3 normal() const;
+	bool get_barycentric_coord(const Ray& ray, barycentric& uvw) const;
+	bool get_barycentric_coord(const point3& pt, barycentric& uvw) const;
 private:
 	vec3 get_normal() const;
-	bool check_point_in(const point3& P) const;
+	bool check_point_in(const point3& P, barycentric& uvw) const;
 private:
 	point3 A, B, C;
 	shared_ptr<Material> material;
@@ -37,7 +39,7 @@ bool Triangle::intersect(const Ray& ray, double t_min, double t_max, IntersectRe
 	auto pvec = glm::cross(ray.direction(), AC);
 	const double det = glm::dot(AB, pvec);
 	
-	if (fabs(det) < zero) // close to zero - parallel
+	if (fabs(det) < epsilon) // close to zero - parallel
 		return false;
 
 	const double inv_det = 1.0 / det;
@@ -86,14 +88,13 @@ void Triangle::set_points(const point3& p1, const point3& p2, const point3& p3)
 	C = p3;
 }
 
-bool Triangle::check_point_in(const point3& P) const
+bool Triangle::check_point_in(const point3& P, barycentric& uvw) const
 {
-	/*
-		feature: add computing barycentric coordinate
-	*/
 	vec3 N = get_normal();
 	// inside-outside test (CCW point P on left side)
 	point3 C(0.0);
+
+	// edge - 1
 	auto AB = B - A;
 	auto AP = P - A;
 	C = glm::cross(AB, AP);
@@ -101,18 +102,57 @@ bool Triangle::check_point_in(const point3& P) const
 	if (glm::dot(N, C) < 0.0) // P on right side
 		return false;
 
+	// edge - 2
 	auto BC = C - B;
 	auto BP = P - B;
 	C = glm::cross(BC, BP);
-
-	if (glm::dot(N, C) < 0.0) // P on right side
+	auto u = glm::dot(N, C);
+	if (u < 0.0) // P on right side
 		return false;
 
+	// edge - 3
 	auto CA = A - C;
 	auto CP = P - C;
 	C = glm::cross(CA, CP);
-	if (glm::dot(N, C) < 0.0) // P on right side
+	auto v = glm::dot(N, C);
+	if (v < 0.0) // P on right side
 		return false;
 
+	const auto denom = glm::dot(N, N);
+
+	u /= denom;
+	v /= denom;
+
+	uvw.x = u;
+	uvw.y = v;
+	uvw.z = 1.0 - (u + v);
+
 	return true;
+}
+
+
+bool Triangle::get_barycentric_coord(const Ray& ray, barycentric& uvw) const
+{
+	const vec3 edge1 = B - A;
+	const vec3 edge2 = C - A;
+	const vec3 q = glm::cross(ray.direction(), edge2);
+
+	const double a = glm::dot(edge1, q);
+
+	/* check parallel or behind the triangle */
+	if (fabs(a) <= epsilon)
+		return false;
+
+	const vec3 s = ray.origin() - A;
+	const vec3 r = glm::cross(s, edge1);
+
+	uvw.x = glm::dot(s, q) / a;
+	uvw.y = glm::dot(ray.direction(), r) / a;
+	uvw.z = 1.0 - (uvw.x + uvw.y);
+}
+
+
+bool Triangle::get_barycentric_coord(const point3& pt, barycentric& uvw) const
+{
+	return check_point_in(pt, uvw);
 }

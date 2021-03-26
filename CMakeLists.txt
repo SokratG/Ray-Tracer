@@ -6,6 +6,8 @@ else()
     project(RayTracer LANGUAGES C CXX)
 endif()
 
+set(CMAKE_CXX_STANDARD 17)
+
 # OpenGL
 #find_package(OpenGL REQUIRED)
 

@@ -6,18 +6,35 @@ struct IntersectRecord;
 
 enum material_type{ DIFFUSE_AND_GLOSSY, REFLECTION_AND_REFRACTION, REFLECTION };
 
+struct color_pack
+{
+	color specular_color;
+	/*color diffuse_color;*/ // use albedo instead
+	color ambient_color;
+	double glossiness;
+	double reflectivity;
+	double refractivity_index;
+	color_pack(const color& specular = color(0.0), const color& ambient = color(0.0),
+		const double glossiness_color = 0.0, const double reflectivity_color = 0.0, const double refractivity_index_color = 1.0) :
+		specular_color(specular), glossiness(glossiness_color), ambient_color(ambient),
+		reflectivity(reflectivity_color), refractivity_index(refractivity_index_color)
+	{
+		assert(reflectivity <= 1.0 && reflectivity >= 0.0);
+	}
+};
+
+using color_data = color_pack;
 
 class Material
 {
 private:
 	/* use default value */
-	double shininess = 32.0;
-	double Kd = 0.8, Ks = 0.2;
 public:
 	material_type mat_type;
+	shared_ptr<color_data> color_property;
 #pragma warning(push)
 #pragma warning(disable : 26812)
-	Material(material_type mt) : mat_type(mt) {}
+	Material(material_type mt, const shared_ptr<color_data> color_data = nullptr) : mat_type(mt), color_property(color_data) {}
 #pragma warning(pop)
 public:
 	virtual bool scatter(const Ray& ray, const IntersectRecord& irc, color& attenuation, Ray& scattered) const = 0;
@@ -76,7 +93,7 @@ public:
 
 	virtual bool scatter(const Ray& ray, const IntersectRecord& irc, color& attenuation, Ray& scattered) const override
 	{
-		attenuation = color(1.0, 1.0, 1.0); // white color
+		attenuation = color(1.0, 1.0, 1.0);
 		double refraction_ratio = irc.front_face ? (1.0 / ir) : ir;
 		vec3 unit_dir = glm::normalize(ray.direction());
 

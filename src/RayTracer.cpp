@@ -3,12 +3,15 @@
 #include <Scene.hpp>
 #include <option.hpp>
 
+
+
+
 shared_ptr<IntersectList> generate_world()
 {
 	shared_ptr<IntersectList> world = make_shared<IntersectionList>();
 	auto ground_material = make_shared<Lambertian>(color(0.5, 0.5, 0.5));
 	world->add(make_shared<Sphere>(point3(0, -1000.0, 0), 1000, ground_material));
-	/*
+	
 	for (int a = -3; a < 3; a++) {
 		for (int b = -3; b < 3; b++) {
 			auto choose_mat = random_double();
@@ -38,7 +41,7 @@ shared_ptr<IntersectList> generate_world()
 			}
 		}
 	}
-	*/
+	
 	
 	auto material1 = make_shared<Dielectric>(1.5);
 	auto material2 = make_shared<Lambertian>(color(0.4, 0.2, 0.1));
@@ -52,24 +55,46 @@ shared_ptr<IntersectList> generate_world()
 	world->add(make_shared<Triangle>(point3(1, 0, 0), point3(1, 2, 0), point3(4, 0, 0), material3));
 	*/
 
-	// world->add(make_shared<Sphere>(point3(0, 1, 0), 1.0, material1));
-	// world->add(make_shared<Triangle>(point3(1, 0, 0), point3(1, 2, 0), point3(4, 0, 0), material3));
+	world->add(make_shared<Sphere>(point3(0, 1, 0), 1.0, material1));
+	world->add(make_shared<Triangle>(point3(1, 0, 0), point3(1, 2, 0), point3(4, 0, 0), material3));
 
 	
 	return world;
 }
 
-std::vector<shared_ptr<Light>> generate_lights()
+#include <memory/Allocator.hpp>
+#include <profile/timeprofile.hpp>
+#include <memory/memmanager.hpp>
+class Complex;
+
+MemoryManager<Complex, 110> gMemoryManager;
+
+class Complex
 {
-	std::vector<shared_ptr<Light>> lights;
+public:
+	Complex() :r(0.0), c(0.0) {}
+	Complex(double a, double b) : r(a), c(b) {}
+	Complex(const Complex& other) { r = other.r;  c = other.c; }
+	
+	inline void* operator new(const size_t size)
+	{
+		return gMemoryManager.allocate(size);
+	}
+	inline void   operator delete(void* ptr_obj)
+	{
+		gMemoryManager.free(ptr_obj);
+	}
+private:
+	double r; // Real Part
+	double c; // Complex Part
+	double d; // Complex Part
+	double a; // Complex Part
+	double s; // Complex Part
+	double x; // Complex Part
+	double z; // Complex Part
+};
 
-	auto light1 = make_shared<Light>(point3(-5, -3, 0), color(1.0, 1.0, 1.0));
-
-	lights.emplace_back(light1);
-
-	return lights;
-}
-
+Complex* array[3000000];
 
 int main(int argc, char* argv[])	
 {
@@ -78,8 +103,6 @@ int main(int argc, char* argv[])
 	// screen
 	shared_ptr<Screen> screen = make_shared<Screen>();
 	
-	// make a framebuffer
-	byte* framebuffer = new byte[screen->screenwidth * screen->screenheight * screen->num_ch] {0};
 
 	// Raytracer and Camera options;
 	Option option;
@@ -94,19 +117,42 @@ int main(int argc, char* argv[])
 	shared_ptr<Camera> camera = make_shared<Camera>(*screen, cameraopt);
 
 	// wolrd
-	shared_ptr<IntersectList> world = generate_world();
-	std::vector<shared_ptr<Light>> lights = generate_lights();
+	// shared_ptr<IntersectList> world = generate_world();
+
+	// image
+	// Image image(screen->screenwidth, screen->screenheight, screen->num_ch);
 
 	// scene
-	Scene scene;
-	scene.init(lights, screen, camera, option);
-	scene.render(framebuffer, *world);
+	// Scene scene;
+	// scene.init(screen, camera, option);
+	/*
+	* scene.render(image, *world);
+	*/
+
+
+	{
+		
+		TimeProfile tp(true);
+		//std::vector<Complex, LAllocator<Complex>> veccomp;
+		// for (int i = 0; i < 5000; i++) {
+		for (int j = 0; j < 3000000; j++) {
+				array[j] = new Complex(0.0, j);
+				//veccomp.push_back(Complex(i, j));
+		}
+		//}
+		
+		for (int j = 0; j < 3000000; j++) {
+			delete array[j];
+		}
+	}
+
+
+	
 
 	// save
-	save_img(outfn, framebuffer, screen->screenwidth, screen->screenheight, screen->num_ch);
+	// image.save_image(outfn, image_png);
 
-	delete[] framebuffer;
-
+	
 	return 0;
 }
 

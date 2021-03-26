@@ -5,8 +5,10 @@
 
 // Constants
 const double infinity = std::numeric_limits<double>::infinity();
+const double epsilon = std::numeric_limits<double>::epsilon();
+const double neg_epsilon = -std::numeric_limits<double>::epsilon();
 const double pi = 3.1415926535897932385;
-const double zero = std::numeric_limits<double>::epsilon();
+constexpr double bias = 0.00001;
 
 // helper function
 inline double random_double() {
@@ -14,6 +16,25 @@ inline double random_double() {
     static std::mt19937 generator;
     return distribution(generator);
 }
+
+
+template<typename Numeric = double, typename Generator = std::mt19937>
+Numeric random(Numeric from, Numeric to)
+{
+    thread_local static Generator gen(std::random_device{}());
+
+    using dist_type = typename std::conditional
+        <
+        std::is_integral<Numeric>::value
+        , std::uniform_int_distribution<Numeric>
+        , std::uniform_real_distribution<Numeric>
+        >::type;
+
+    thread_local static dist_type dist;
+
+    return dist(gen, typename dist_type::param_type{ from, to });
+};
+
 
 #ifdef off_cpp
 inline double random_double() {
@@ -30,7 +51,7 @@ inline double random_double(double min, double max) {
 
 inline bool near_zero(const vec3& v) {
     //constexpr auto zero = 1e-9;
-    return (fabs(v[0]) < zero) && (fabs(v[1]) < zero) && (fabs(v[2]) < zero);
+    return (fabs(v[0]) < epsilon) && (fabs(v[1]) < epsilon) && (fabs(v[2]) < epsilon);
 }
 
 vec3 generate_random_vec(const double min, const double max);
@@ -41,7 +62,6 @@ vec3 random_unit_in_disk();
 color random_color();
 color random_color(const double min, const double max);
 
-void save_img(const std::string& filename, byte* data, size_t width, size_t height, size_t num_ch);
 
 /* pixel convert */
 void RGBPixel(byte pixels[3], const vec3& lightcolor);
@@ -49,4 +69,4 @@ void RGBPixel(byte pixels[3], const vec3& lightcolor);
 void RGBPixel(icolor& color, const vec3& lightcolor);
 
 /* Anti-Aliasing pixel convert */
-void AA_RGBPixel(byte pixels[3], const vec3& lightcolor, const size_t sample_per_pixel, const double gamma);
+void AA_RGBPixel(color& pixels, const vec3& lightcolor, const size_t sample_per_pixel, const double gamma);

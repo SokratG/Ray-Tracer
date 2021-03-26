@@ -6,6 +6,7 @@
 #include <option.hpp>
 #include <Material.hpp>
 #include <Light.hpp>
+#include <Image.hpp>
 #ifdef _USE_THREAD
 #include <ThreadPool.h>
 #endif
@@ -18,14 +19,14 @@
 #define blackcolor color(0.0, 0.0, 0.0)
 #define whitecolor color(1.0, 1.0, 1.0)
 
-constexpr double bias = 0.00001;
+
 
 class Scene
 {
 public:
 	Scene() {}
-	bool init(const std::vector<shared_ptr<Light>>& lights, const shared_ptr<Screen>& scn, const shared_ptr<Camera>& cam, const RayTracerOption& option);
-	void render(byte* framebuffer, const IntersectList& world);
+	bool init(const shared_ptr<Screen>& scn, const shared_ptr<Camera>& cam, const RayTracerOption& option);
+	void render(Image& image, const IntersectList& world);
 #ifdef _USE_THREAD
 	void thread_render(byte* framebuffer, const IntersectList& world);
 #endif
@@ -33,14 +34,12 @@ public:
 	void cuda_render(byte* framebuffer, const size_t buffer_size, const IntersectList& world);
 #endif
 private:
-	void draw_pixel(const IntersectList& world, const lint i, const lint j, byte pixel[3]);
+	void draw_pixel(const IntersectList& world, const lint i, const lint j, color& pixel);
 	color ray_color(const Ray& ray, const IntersectList& world, lint depth);
-	
-private:
-	std::vector<shared_ptr<Light>> scene_lights;
 private:
 	shared_ptr<Camera> camera;
 	shared_ptr<Screen> screen;
+	color backcolor = blackcolor;
 	lint img_width = 0;
 	lint img_height = 0;
 	lint sample_per_pixel = 0;
@@ -49,7 +48,7 @@ private:
 	bool isInit = false;
 };
 
-bool Scene::init(const std::vector<shared_ptr<Light>>& lights, const shared_ptr<Screen>& scn, const shared_ptr<Camera>& cam, const RayTracerOption& option)
+bool Scene::init(const shared_ptr<Screen>& scn, const shared_ptr<Camera>& cam, const RayTracerOption& option)
 {
 	assert(option.maxdepth > 0);
 	assert(scn->gammacorrection > 0);
@@ -64,34 +63,31 @@ bool Scene::init(const std::vector<shared_ptr<Light>>& lights, const shared_ptr<
 	sample_per_pixel = option.sample_per_pixel;
 	this->maxdepth = option.maxdepth;
 	gammacorrection = scn->gammacorrection;
+	backcolor = screen->backgroundcolor;
 
-	if (!lights.empty())
-		scene_lights = lights;
 
 	isInit = true;
 	return isInit;
 }
 
-void Scene::render(byte* framebuffer, const IntersectList& world)
+void Scene::render(Image& image, const IntersectList& world)
 {
 	assert(isInit == true);
-	assert(framebuffer != nullptr);
 
 	lint base = 0;
-	byte pixel[3]{ 0 };
+	color pixel{ 0 };
 	for (lint j = img_height - 1; j >= 0; --j) {
 		for (lint i = 0; i < img_width; ++i) {
 			draw_pixel(world, i, j, pixel);
-			framebuffer[3 * base] = pixel[0];
-			framebuffer[3 * base + 1] = pixel[1];
-			framebuffer[3 * base + 2] = pixel[2];
+			image.set_color(base, pixel);
 			base += 1;
 		}
 	}
+
 }
 
 
-void Scene::draw_pixel(const IntersectList& world, const lint i, const lint j, byte pixel[3])
+void Scene::draw_pixel(const IntersectList& world, const lint i, const lint j, color& pixel)
 {
 	lint width = camera->get_screen_width() - 1;
 	lint height = camera->get_screen_height() - 1;
@@ -109,7 +105,7 @@ color Scene::ray_color(const Ray& ray, const IntersectList& world, lint depth)
 {
 	// If we've exceeded the ray bounce limit, no more light is gathered.
 	if (depth <= 0)
-		return blackcolor;
+		return backcolor;  //screen->backgroundcolor
 
 	IntersectRecord irc;
 	if (world.intersect(ray, 0.001, infinity, irc)) {
@@ -118,11 +114,11 @@ color Scene::ray_color(const Ray& ray, const IntersectList& world, lint depth)
 		if (irc.material->scatter(ray, irc, attenuation, scattered)) {
 			return attenuation * ray_color(scattered, world, depth - 1);
 		}
-		return blackcolor;
+		return backcolor;
 	}
 	vec3 unit_dir = glm::normalize(ray.direction());
 	auto t = 0.5 * (unit_dir.y + 1.0); // blend respect y position
-	return (1.0 - t) * whitecolor + t * screen->backgroundcolor; // final background blend color
+	return (1.0 - t) * whitecolor + t * backcolor; // final background blend color
 }
 
 

@@ -1,25 +1,9 @@
 #include "utility.hpp"
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-#define STBI_MSC_SECURE_CRT
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+
 #include <cassert>
 
 
-void save_img(const std::string& filename, byte* data,  size_t width, size_t height, size_t num_ch)
-{
-    assert(width > 0 && height > 0 && num_ch > 0);
-    assert(data != nullptr);
-    assert(!filename.empty());
-	constexpr int quality = 100; // [1, 100]
-    // stbi_write_png
-    //stbi_write_jpg(filename.c_str(), width, height, num_ch, data, quality);
-	stbi_write_png(filename.c_str(), width, height, num_ch, data, width * num_ch);
-}
-
-
-void AA_RGBPixel(byte pixels[3], const vec3& lightcolor, const size_t sample_per_pixel, const double gamma)
+void AA_RGBPixel(color& pixels, const vec3& lightcolor, const size_t sample_per_pixel, const double gamma)
 {
 	assert(gamma > 0);
 	auto r = lightcolor[0];

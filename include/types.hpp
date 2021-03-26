@@ -10,14 +10,27 @@
 using uint = unsigned int;
 using uchar = unsigned char;
 using byte = uchar;
-using color = glm::dvec3;
-using icolor = glm::ivec3;
+using lint = long long;
+
+
+using color3 = glm::dvec3;
+using color4 = glm::dvec4;
+using icolor3 = glm::ivec3;
+using icolor4 = glm::ivec4;
+using color = color3;
+using icolor = icolor3;
+
 using vec3 = glm::dvec3;
 using vec4 = glm::dvec4;
+
 using mat3 = glm::dmat3;
 using mat4 = glm::dmat4;
+
 using point3 = glm::dvec3;
-using lint = long long;
+using point4 = glm::dvec4;
+
+
+using barycentric = vec3;
 
 
 using std::shared_ptr;
