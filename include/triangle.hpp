@@ -149,6 +149,8 @@ bool Triangle::get_barycentric_coord(const Ray& ray, barycentric& uvw) const
 	uvw.x = glm::dot(s, q) / a;
 	uvw.y = glm::dot(ray.direction(), r) / a;
 	uvw.z = 1.0 - (uvw.x + uvw.y);
+
+	return true;
 }
 
 

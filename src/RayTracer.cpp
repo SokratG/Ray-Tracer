@@ -62,39 +62,6 @@ shared_ptr<IntersectList> generate_world()
 	return world;
 }
 
-#include <memory/Allocator.hpp>
-#include <profile/timeprofile.hpp>
-#include <memory/memmanager.hpp>
-class Complex;
-
-MemoryManager<Complex, 110> gMemoryManager;
-
-class Complex
-{
-public:
-	Complex() :r(0.0), c(0.0) {}
-	Complex(double a, double b) : r(a), c(b) {}
-	Complex(const Complex& other) { r = other.r;  c = other.c; }
-	
-	inline void* operator new(const size_t size)
-	{
-		return gMemoryManager.allocate(size);
-	}
-	inline void   operator delete(void* ptr_obj)
-	{
-		gMemoryManager.free(ptr_obj);
-	}
-private:
-	double r; // Real Part
-	double c; // Complex Part
-	double d; // Complex Part
-	double a; // Complex Part
-	double s; // Complex Part
-	double x; // Complex Part
-	double z; // Complex Part
-};
-
-Complex* array[3000000];
 
 int main(int argc, char* argv[])	
 {
@@ -117,40 +84,20 @@ int main(int argc, char* argv[])
 	shared_ptr<Camera> camera = make_shared<Camera>(*screen, cameraopt);
 
 	// wolrd
-	// shared_ptr<IntersectList> world = generate_world();
+	shared_ptr<IntersectList> world = generate_world();
 
 	// image
-	// Image image(screen->screenwidth, screen->screenheight, screen->num_ch);
+	Image image(screen->screenwidth, screen->screenheight, screen->num_ch);
 
 	// scene
-	// Scene scene;
-	// scene.init(screen, camera, option);
-	/*
-	* scene.render(image, *world);
-	*/
+	Scene scene;
+	scene.init(screen, camera, option);
+	scene.render(image, *world);
 
 
-	{
-		
-		TimeProfile tp(true);
-		//std::vector<Complex, LAllocator<Complex>> veccomp;
-		// for (int i = 0; i < 5000; i++) {
-		for (int j = 0; j < 3000000; j++) {
-				array[j] = new Complex(0.0, j);
-				//veccomp.push_back(Complex(i, j));
-		}
-		//}
-		
-		for (int j = 0; j < 3000000; j++) {
-			delete array[j];
-		}
-	}
-
-
-	
 
 	// save
-	// image.save_image(outfn, image_png);
+	image.save_image(outfn, image_png);
 
 	
 	return 0;
