@@ -55,6 +55,11 @@ vec3 random_unit_vector() {
 	return glm::normalize(random_unit_in_sphere());
 }
 
+vec3 random_unit_vector(const double min, const double max) {
+	return glm::normalize(vec3(random_double(min, max), random_double(min, max), random_double(min, max)));
+}
+
+
 vec3 random_in_hemisphere(const vec3& normal)
 {
 	vec3 unit_vec_sphere = random_unit_in_sphere();

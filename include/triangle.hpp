@@ -13,9 +13,14 @@ class Triangle : public IIntersect
 public:
 	Triangle() : A(0.0), B(0.0), C(0.0) {}
 	Triangle(const point3& p1, const point3& p2, const point3& p3, const shared_ptr<Material> m) : A(p1), B(p2), C(p3), material(m) {}
+
 	virtual bool intersect(const Ray& ray, double t_min, double t_max, IntersectRecord& irec) const override;
+	virtual bool bounding_box(double time0, double time1, AABB& output_box) const override;
+
 	void set_points(const point3& p1, const point3& p2, const point3& p3);
 	void set_material(const shared_ptr<Material> m) { material = m; }
+
+	void get_uv(const point3& p, double& u, double& v) const;
 public:
 	vec3 normal() const;
 	bool get_barycentric_coord(const Ray& ray, barycentric& uvw) const;
@@ -39,8 +44,10 @@ bool Triangle::intersect(const Ray& ray, double t_min, double t_max, IntersectRe
 	auto pvec = glm::cross(ray.direction(), AC);
 	const double det = glm::dot(AB, pvec);
 	
-	if (fabs(det) < epsilon) // close to zero - parallel
+	// close to zero - parallel
+	if (det < epsilon && det > neg_epsilon) {
 		return false;
+	}
 
 	const double inv_det = 1.0 / det;
 
@@ -60,9 +67,13 @@ bool Triangle::intersect(const Ray& ray, double t_min, double t_max, IntersectRe
 	if (t < t_min || t > t_max) 
 		return false;
 	
+	// auto w = 1 - u - v;
+
 	irec.t = t;
 	irec.p = ray.at(irec.t);
 	vec3 outward_normal = get_normal();
+	irec.uv.x = u; // u
+	irec.uv.y = v; // v
 	irec.set_face_normal(ray, outward_normal);
 	irec.material = material;
 
@@ -92,29 +103,29 @@ bool Triangle::check_point_in(const point3& P, barycentric& uvw) const
 {
 	vec3 N = get_normal();
 	// inside-outside test (CCW point P on left side)
-	point3 C(0.0);
+	point3 _C(0.0);
 
 	// edge - 1
 	auto AB = B - A;
 	auto AP = P - A;
-	C = glm::cross(AB, AP);
+	_C = glm::cross(AB, AP);
 
-	if (glm::dot(N, C) < 0.0) // P on right side
+	if (glm::dot(N, _C) < 0.0) // P on right side
 		return false;
 
 	// edge - 2
 	auto BC = C - B;
 	auto BP = P - B;
-	C = glm::cross(BC, BP);
-	auto u = glm::dot(N, C);
+	_C = glm::cross(BC, BP);
+	auto u = glm::dot(N, _C);
 	if (u < 0.0) // P on right side
 		return false;
 
 	// edge - 3
 	auto CA = A - C;
 	auto CP = P - C;
-	C = glm::cross(CA, CP);
-	auto v = glm::dot(N, C);
+	_C = glm::cross(CA, CP);
+	auto v = glm::dot(N, _C);
 	if (v < 0.0) // P on right side
 		return false;
 
@@ -157,4 +168,46 @@ bool Triangle::get_barycentric_coord(const Ray& ray, barycentric& uvw) const
 bool Triangle::get_barycentric_coord(const point3& pt, barycentric& uvw) const
 {
 	return check_point_in(pt, uvw);
+}
+
+
+
+bool Triangle::bounding_box(double time0, double time1, AABB& output_box) const
+{
+	auto min_x = std::min({ A.x, B.x, C.x });
+	auto min_y = std::min({ A.y, B.y, C.y });
+	auto min_z = std::min({ A.z, B.z, C.z });
+
+	auto max_x = std::max({ A.x, B.x, C.x });
+	auto max_y = std::max({ A.y, B.y, C.y });
+	auto max_z = std::max({ A.z, B.z, C.z });
+
+	point3 a(min_x, min_y, min_z);
+	point3 b(max_x, max_y, max_z);
+
+	output_box = AABB(a, b);
+
+	return true;
+}
+
+
+void Triangle::get_uv(const point3& P, double& u, double& v) const
+{
+	/* 
+		fast barycentric compute coordinates 
+		https://gamedev.stackexchange.com/questions/23743/whats-the-most-efficient-way-to-find-barycentric-coordinates
+	*/
+	vec3 v0 = B - A; vec3 v1 = C - A; vec3 v2 = P - A;
+	auto d00 = glm::dot(v0, v0);
+	auto d01 = glm::dot(v0, v1);
+	auto d11 = glm::dot(v1, v1);
+	auto d20 = glm::dot(v2, v0);
+	auto d21 = glm::dot(v2, v1);
+	auto denom = d00 * d11 - d01 * d01;
+
+	auto alpha = (d11 * d20 - d01 * d21) / denom;
+	auto beta = (d00 * d21 - d01 * d20) / denom;
+	auto gamma = 1 - alpha - beta;
+	u = alpha;
+	v = beta;
 }

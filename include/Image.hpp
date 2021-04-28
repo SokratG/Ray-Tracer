@@ -17,6 +17,7 @@ private:
 	size_t num_ch;
 	size_t buffer_size = 0;
 	byte* framebuffer = nullptr;
+
 public:
 	Image(const lint img_width, const lint img_height, const size_t num_channel = 3) : 
 		width(img_width), height(img_height), num_ch(num_channel)
@@ -26,9 +27,60 @@ public:
 		framebuffer = new byte[buffer_size]{ 0 };
 	}
 
+	Image(const std::string& filepath, const int components_per_pixel = 0) {
+		// stbi_set_flip_vertically_on_load(true);
+		auto texwidth = 0; auto texheight = 0; auto nrComponents = 0;
+		uchar* data = nullptr;
+		data = stbi_load(filepath.c_str(), &texwidth, &texheight, &nrComponents, components_per_pixel);
+		if (data) {
+			width = texwidth; height = texheight; num_ch = nrComponents;
+			buffer_size = texwidth * texheight * nrComponents;
+			framebuffer = new byte[buffer_size]{ 0 };
+			std::memcpy(framebuffer, data, buffer_size);
+		}
+		else
+		{
+			stbi_image_free(data);
+			assert(false && "Texture failed to load at path");
+		}
+		stbi_image_free(data);
+	}
+
 	~Image() { if (framebuffer) delete[] framebuffer; }
 	lint get_width() const { return width; }
 	lint get_height() const { return height; }
+	size_t get_num_ch() const { return num_ch; }
+	size_t get_buff_size() const { return buffer_size; }
+	byte* get_framebuffer_ptr() const { if (framebuffer) return framebuffer; else return nullptr; }
+
+
+
+	void read_from_file(const std::string& filepath, const int components_per_pixel = 0) {
+
+		if (framebuffer) {
+			std::memset(framebuffer, 0, buffer_size);
+			delete[] framebuffer;
+			framebuffer = nullptr;
+		}
+
+		// stbi_set_flip_vertically_on_load(true);
+		auto texwidth = 0; auto texheight = 0; auto nrComponents = 0;
+		uchar* data = nullptr;
+		data = stbi_load(filepath.c_str(), &texwidth, &texheight, &nrComponents, components_per_pixel);
+		if (data) {
+			width = texwidth; height = texheight; num_ch = nrComponents;
+			buffer_size = texwidth * texheight * nrComponents;
+			framebuffer = new byte[buffer_size]{ 0 };
+			std::memcpy(framebuffer, data, buffer_size);
+		}
+		else
+		{
+			stbi_image_free(data);
+			assert(false && "Texture failed to load at path");
+		}
+		stbi_image_free(data);
+	}
+
 
 	bool get_color(const lint x, const lint y, color& pixel) const {
 

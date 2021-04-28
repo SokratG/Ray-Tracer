@@ -1,42 +1,24 @@
 #pragma once
 #include <utility.hpp>
+#include <texture.hpp>
 
 struct IntersectRecord;
 
+#define blackcolor color(0.0, 0.0, 0.0)
+#define whitecolor color(1.0, 1.0, 1.0)
 
-enum material_type{ DIFFUSE_AND_GLOSSY, REFLECTION_AND_REFRACTION, REFLECTION };
-
-struct color_pack
-{
-	color specular_color;
-	/*color diffuse_color;*/ // use albedo instead
-	color ambient_color;
-	double glossiness;
-	double reflectivity;
-	double refractivity_index;
-	color_pack(const color& specular = color(0.0), const color& ambient = color(0.0),
-		const double glossiness_color = 0.0, const double reflectivity_color = 0.0, const double refractivity_index_color = 1.0) :
-		specular_color(specular), glossiness(glossiness_color), ambient_color(ambient),
-		reflectivity(reflectivity_color), refractivity_index(refractivity_index_color)
-	{
-		assert(reflectivity <= 1.0 && reflectivity >= 0.0);
-	}
-};
-
-using color_data = color_pack;
 
 class Material
 {
 private:
 	/* use default value */
 public:
-	material_type mat_type;
-	shared_ptr<color_data> color_property;
 #pragma warning(push)
 #pragma warning(disable : 26812)
-	Material(material_type mt, const shared_ptr<color_data> color_data = nullptr) : mat_type(mt), color_property(color_data) {}
+	Material() {}
 #pragma warning(pop)
 public:
+	virtual color emitted(double u, double v, const point3& p) const { return blackcolor; }
 	virtual bool scatter(const Ray& ray, const IntersectRecord& irc, color& attenuation, Ray& scattered) const = 0;
 };
 
@@ -46,9 +28,12 @@ public:
 class Lambertian : public Material
 {
 public:
-	color albedo;
+	shared_ptr<Texture> albedo;
 public:
-	Lambertian(const color& c) : Material(DIFFUSE_AND_GLOSSY), albedo(c) {}
+
+	Lambertian(const color& c) : albedo(make_shared<SolidColor>(c)) {}
+	Lambertian(shared_ptr<Texture> tex) : albedo(tex) {}
+
 	virtual bool scatter(const Ray& ray, const IntersectRecord& irc, color& attenuation, Ray& scattered) const override
 	{
 		auto scattered_dir = irc.normal + random_unit_vector();
@@ -57,8 +42,8 @@ public:
 		if (near_zero(scattered_dir))
 			scattered_dir = irc.normal;
 
-		scattered = Ray(irc.p, scattered_dir);
-		attenuation = albedo;
+		scattered = Ray(irc.p, scattered_dir, ray.time());
+		attenuation = albedo->value(irc.uv.x, irc.uv.y, irc.p);
 		return true;
 	}
 };
@@ -71,11 +56,11 @@ public:
 	color albedo;
 	double fuzzier;
 public:
-	Metal(const color& c, const double fuzz) : Material(REFLECTION), albedo(c), fuzzier(fuzz < 1.0 ? fuzz : 1.0) {}
+	Metal(const color& c, const double fuzz) : albedo(c), fuzzier(fuzz < 1.0 ? fuzz : 1.0) {}
 	virtual bool scatter(const Ray& ray, const IntersectRecord& irc, color& attenuation, Ray& scattered) const override
 	{
 		vec3 reflected = glm::reflect(glm::normalize(ray.direction()), irc.normal);
-		scattered = Ray(irc.p, reflected + fuzzier * random_unit_in_sphere());
+		scattered = Ray(irc.p, reflected + fuzzier * random_unit_in_sphere(), ray.time());
 		attenuation = albedo;
 		return (glm::dot(scattered.direction(), irc.normal) > 0);
 	}
@@ -89,7 +74,7 @@ class Dielectric : public Material
 public:
 	double ir; // Index of Refraction
 public:
-	Dielectric(const double index_of_refraction) : Material(REFLECTION_AND_REFRACTION), ir(index_of_refraction) {}
+	Dielectric(const double index_of_refraction) : ir(index_of_refraction) {}
 
 	virtual bool scatter(const Ray& ray, const IntersectRecord& irc, color& attenuation, Ray& scattered) const override
 	{
@@ -108,7 +93,7 @@ public:
 		else
 			dir = glm::refract(unit_dir, irc.normal, refraction_ratio);
 
-		scattered = Ray(irc.p, dir);
+		scattered = Ray(irc.p, dir, ray.time());
 		return true;
 	}
 private:
@@ -118,4 +103,19 @@ private:
 		r0 = r0 * r0;
 		return r0 + (1.0 - r0) * glm::pow((1.0 - cosine), 5);
 	}
+};
+
+
+class Isotropic : public Material
+{
+public:
+	Isotropic(const color c) : albedo(make_shared<SolidColor>(c)) {}
+	Isotropic(shared_ptr<Texture> a) : albedo(a) {}
+	bool scatter(const Ray& ray, const IntersectRecord& irc, color& attenuation, Ray& scattered) const override {
+		scattered = Ray(irc.p, random_unit_in_sphere(), ray.time());
+		attenuation = albedo->value(irc.uv.x, irc.uv.y, irc.p);
+		return true;
+	}
+public:
+	shared_ptr<Texture> albedo;
 };

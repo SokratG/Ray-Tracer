@@ -49,6 +49,11 @@ inline double random_double(double min, double max) {
     return min + (max-min) * random_double();
 }
 
+inline int random_int(int min, int max) {
+    // Returns a random integer in [min, max]
+    return static_cast<int>(random_double(min, max + 1));
+}
+
 inline bool near_zero(const vec3& v) {
     //constexpr auto zero = 1e-9;
     return (fabs(v[0]) < epsilon) && (fabs(v[1]) < epsilon) && (fabs(v[2]) < epsilon);
@@ -57,6 +62,7 @@ inline bool near_zero(const vec3& v) {
 vec3 generate_random_vec(const double min, const double max);
 vec3 random_unit_in_sphere();
 vec3 random_unit_vector();
+vec3 random_unit_vector(const double min, const double max);
 vec3 random_in_hemisphere(const vec3& normal);
 vec3 random_unit_in_disk();
 color random_color();

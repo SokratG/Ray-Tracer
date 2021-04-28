@@ -9,14 +9,14 @@ struct CameraOption
 	vec3 up;
 	double fovy = 20.0;
 	double aperture = 0.0; // depth of field: 0 - without blur and other value give a blur effect
-	double focus_dist = 0.0;
+	double focus_dist = 10.0;
 };
 
 
 class Camera
 {
 public:
-	Camera(const Screen& screen, const CameraOption& cameraopt)
+	Camera(const Screen& screen, const CameraOption& cameraopt, const double time0=0.0, const double time1=0.0)
 	{
 		auto theta = glm::radians(cameraopt.fovy); // vertical field-of-view in degrees
 		auto h = tan(theta / 2); 
@@ -39,12 +39,18 @@ public:
 		// optional
 		img_width = screen.screenwidth;
 		img_height = screen.screenheight;
+
+		// time
+		tm0 = time0;
+		tm1 = time1;
 	}
 
 	Ray get_ray(const double s, const double t) const {
 		vec3 rd = lens_radius * random_unit_in_disk();
 		vec3 offset = u * rd.x + v * rd.y;
-		return Ray(origin + offset, lower_left_corner + s * horizontal + t * vertical - origin - offset);
+		return Ray( origin + offset, 
+					lower_left_corner + s * horizontal + t * vertical - origin - offset, 
+					random_double(tm0, tm1));
 	}
 
 	lint get_screen_width() const { return img_width; }
@@ -59,4 +65,7 @@ private:
 	lint img_width;
 	lint img_height;
 	double lens_radius = 0.0;
+	/* shutter open/close times - for motion blur */
+	double tm0;
+	double tm1;
 };

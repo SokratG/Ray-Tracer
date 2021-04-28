@@ -8,8 +8,6 @@ endif()
 
 set(CMAKE_CXX_STANDARD 17)
 
-# OpenGL
-#find_package(OpenGL REQUIRED)
 
 # GLM
 #find_package(glm REQUIRED)
@@ -43,7 +41,7 @@ file(GLOB SRCRT "src/*.cpp")
 include_directories("${PROJECT_SOURCE_DIR}/include")
 include_directories(${GLM_INCLUDE_DIR})
 include_directories("${PROJECT_BINARY_DIR}")
-#include_directories(${OpenGL_INCLUDE_DIRS})
+
 add_definitions(-D_USE_MATH_DEFINES)
 #add_definitions(-D_USE_THREAD)
 
