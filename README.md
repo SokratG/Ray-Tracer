@@ -1,7 +1,5 @@
 ## "Offline" Path tracing rendering
 
-### project in progess...
-
 <img src="resource/image.png">
 
 ###
